@@ -157,6 +157,7 @@ def get_single_document_tfidf(text):
     tfidf_values = compute_single_document_tfidf(processed_input)
     return tfidf_values
 
+
 def compute_classification_metrics(actual_labels, predicted_labels):
     true_positive = false_positive = true_negative = false_negative = 0
 
@@ -171,29 +172,6 @@ def compute_classification_metrics(actual_labels, predicted_labels):
             false_negative += 1
 
     return true_positive, false_positive, true_negative, false_negative
-
-
-nltk.download('stopwords')
-data = pd.read_csv('spam.csv', encoding='latin-1')
-data = data[['v1', 'v2']]
-data.columns = ['label', 'message']
-
-tfidf_df = generate_tfidf_for_keywords()
-label_encoder = LabelEncoder()
-tfidf_df['label_encoded'] = label_encoder.fit_transform(tfidf_df['label'])
-X = tfidf_df.drop(columns=['label', 'label_encoded']).values
-y = tfidf_df['label_encoded'].values
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
-y_train_tensor = torch.tensor(y_train, dtype=torch.float32).unsqueeze(1)
-X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
-y_test_tensor = torch.tensor(y_test, dtype=torch.float32).unsqueeze(1)
-
-train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
-test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
 
 class SpamClassifier(nn.Module):
@@ -215,13 +193,6 @@ class SpamClassifier(nn.Module):
         x = self.fc3(x)
         x = self.sigmoid(x)
         return x
-
-
-input_size = X_train.shape[1]
-model = SpamClassifier(input_size)
-
-criterion = nn.BCELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 
 def train_model(model, train_loader, criterion, optimizer, epochs=10):
@@ -276,12 +247,6 @@ def evaluate_model(model, test_loader, test_data):
     print("Predictions with keywords saved to 'predictions_with_keywords.csv'")
 
 
-train_model(model, train_loader, criterion, optimizer, epochs=10)
-evaluate_model(model, test_loader, data.iloc[X_train.shape[0]:])
-
-all_features = tfidf_df.drop(columns=['label', 'label_encoded']).columns.tolist()
-
-
 def vectorize_single_input(single_tf_idf_result, all_features):
     feature_vector = [single_tf_idf_result.get(word, 0) for word in all_features]
     return feature_vector
@@ -301,8 +266,46 @@ def evaluate_single_input(model, text, all_features):
     print(f"Prediction: {label} (Model output: {output.item():.4f})")
 
 
-example_text = r"you've won 1000$, contact me +79643634"
-evaluate_single_input(model, example_text, all_features)
+def main():
+    # nltk.download('stopwords')
+    data = pd.read_csv('spam.csv', encoding='latin-1')
+    data = data[['v1', 'v2']]
+    data.columns = ['label', 'message']
 
-example_text = r"Congratulations! Click here to claim your reward."
-evaluate_single_input(model, example_text, all_features)
+    tfidf_df = generate_tfidf_for_keywords()
+    label_encoder = LabelEncoder()
+    tfidf_df['label_encoded'] = label_encoder.fit_transform(tfidf_df['label'])
+    X = tfidf_df.drop(columns=['label', 'label_encoded']).values
+    y = tfidf_df['label_encoded'].values
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
+    y_train_tensor = torch.tensor(y_train, dtype=torch.float32).unsqueeze(1)
+    X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
+    y_test_tensor = torch.tensor(y_test, dtype=torch.float32).unsqueeze(1)
+
+    train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+    test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+    input_size = X_train.shape[1]
+    model = SpamClassifier(input_size)
+
+    criterion = nn.BCELoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    train_model(model, train_loader, criterion, optimizer, epochs=10)
+    evaluate_model(model, test_loader, data.iloc[X_train.shape[0]:])
+
+    all_features = tfidf_df.drop(columns=['label', 'label_encoded']).columns.tolist()
+
+    example_text = r"you've won 1000$, contact me +79643634"
+    evaluate_single_input(model, example_text, all_features)
+
+    example_text = r"Congratulations! Click here to claim your reward."
+    evaluate_single_input(model, example_text, all_features)
+
+
+if __name__ == '__main__':
+    main()
