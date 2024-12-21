@@ -277,7 +277,7 @@ def main():
     tfidf_df['label_encoded'] = label_encoder.fit_transform(tfidf_df['label'])
     X = tfidf_df.drop(columns=['label', 'label_encoded']).values
     y = tfidf_df['label_encoded'].values
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32).unsqueeze(1)
@@ -300,10 +300,15 @@ def main():
 
     all_features = tfidf_df.drop(columns=['label', 'label_encoded']).columns.tolist()
 
-    example_text = r"you've won 1000$, contact me +79643634"
+    example_text = (r"December only! Had your mobile 11mths+? You are entitled to update to the latest colour "
+                    r"camera mobile for Free! Call The Mobile Update Co FREE on 08002986906,,,")
     evaluate_single_input(model, example_text, all_features)
 
-    example_text = r"Congratulations! Click here to claim your reward."
+    example_text = r"Coffee cake, i guess...,,,"
+    evaluate_single_input(model, example_text, all_features)
+
+    example_text = (r"Text & meet someone sexy today. U can find a date or even flirt its up to U. Join 4 just 10p. "
+                    r"REPLY with NAME & AGE eg Sam 25. 18 -msg recd@thirtyeight pence,,,")
     evaluate_single_input(model, example_text, all_features)
 
 
